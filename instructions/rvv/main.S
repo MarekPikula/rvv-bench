@@ -21,9 +21,10 @@ changecom(`#', `')
 .endm
 
 .macro m_1bit
-vid.v v0
-remu t0, t0, VL
-vmseq.vx v8, v0, t0
+# vid.v and vmseq.vx (sometimes) hangs the processor.
+# vid.v v0
+# remu t0, t0, VL
+# vmseq.vx v8, v0, t0
 .endm
 
 define(`m_mask',
@@ -111,6 +112,76 @@ define(`m_ifmx',`ifelse(eval($1 <= m_LMUL && $2 >= m_LMUL),1,`m_ifmx_t($*)',`m_i
 
 
 # calls $1 with: name type setup code:vararg
+#	m_mask($1, bench_vrgathervv,     T_A,  m_mod_v24_e8_vl,  vrgather.vv,     v8, v16, v24)	# INSTR
+#	m_mask($1, bench_vrgathervx,     T_A,  m_mod_t0_vl,      vrgather.vx,     v8, v16, t0)	# INSTR
+#	m_mask($1, bench_vrgathervi,     T_A,  m_nop,            vrgather.vi,     v8, v16, 3)	# INSTR
+#	m_mask($1, bench_vslideupvx,     T_A,  m_mod_t0_vl,      vslideup.vx,     v8, v16, t0)	# HANG
+#	m_mask($1, bench_vslideupvi,     T_A,  m_nop,            vslideup.vi,     v8, v16, 3)	# HANG
+#	m_mask($1, bench_vrgatherei16vv, T_ei16, m_mod_v24_e16_vl, vrgatherei16.vv, v8, v16, v24) # INSTR
+#	m_mask($1, bench_vslidedownvx, T_A, m_mod_t0_vl,  vslidedown.vx, v8, v16, t0)	# HANG
+#	m_mask($1, bench_vslidedownvi, T_A, m_nop,        vslidedown.vi, v8, v16, 3)	# HANG
+#	m_mask($1, bench_vredsumvs,  T_A, m_nop, vredsum.vs,  v8, v16, v24)				# HANG
+#	m_mask($1, bench_vredandvs,  T_A, m_nop, vredand.vs,  v8, v16, v24)				# HANG
+#	m_mask($1, bench_vredorvs,   T_A, m_nop, vredor.vs,   v8, v16, v24)				# HANG
+#	m_mask($1, bench_vredxorvs,  T_A, m_nop, vredxor.vs,  v8, v16, v24)				# HANG
+#	m_mask($1, bench_vredminuvs, T_A, m_nop, vredminu.vs, v8, v16, v24)				# HANG
+#	m_mask($1, bench_vredminvs,  T_A, m_nop, vredmin.vs,  v8, v16, v24)				# HANG
+#	m_mask($1, bench_vredmaxuvs, T_A, m_nop, vredmaxu.vs, v8, v16, v24)				# HANG
+#	m_mask($1, bench_vredmaxvs,  T_A, m_nop, vredmax.vs,  v8, v16, v24)				# HANG
+#	m_mask($1, bench_vslide1downvx, T_A, m_nop, vslide1down.vx, v8, v16, t0)		# HANG
+#	m_bench_vxim($1, T_A, vadc)		# HANG...
+#	m_bench_vxim($1, T_A, vmadc)	# HANG
+#	m_bench_vxm($1,  T_A, vsbc)		# HANG...
+#	m_bench_vxm($1,  T_A, vmsbc)	# HANG
+#	m_bench_vxi($1, T_A, vmsne)		# HANG..
+#	m_bench_vx($1,  T_A, vmsltu)	# HANG..
+#	m_bench_vx($1,  T_A, vmslt)		# HANG..
+#	m_bench_vxi($1, T_A, vmsleu)	# HANG..
+#	m_bench_vxi($1, T_A, vmsle)		# HANG..
+#	m_bench_xi($1,  T_A, vmsgtu)	# HANG..
+#	m_bench_xi($1,  T_A, vmsgt)		# HANG..
+#	m_$1(bench_vcompressvm, T_A, m_nop, vcompress.vm, v8, v16, v24)	# INSTR
+#	m_$1(bench_vmandnmm, T_m1, m_nop, vmandn.mm, v8, v16, v24) # INSTR
+#	m_$1(bench_vmandmm,  T_m1, m_nop, vmand.mm,  v8, v16, v24) # INSTR
+#	m_$1(bench_vmormm,   T_m1, m_nop, vmor.mm,   v8, v16, v24) # INSTR
+#	m_$1(bench_vmxormm,  T_m1, m_nop, vmxor.mm,  v8, v16, v24) # INSTR
+#	m_$1(bench_vmornmm,  T_m1, m_nop, vmorn.mm,  v8, v16, v24) # INSTR
+#	m_$1(bench_vmnandmm, T_m1, m_nop, vmnand.mm, v8, v16, v24) # INSTR
+#	m_$1(bench_vmnormm,  T_m1, m_nop, vmnor.mm,  v8, v16, v24) # INSTR
+#	m_$1(bench_vmxnormm, T_m1, m_nop, vmxnor.mm, v8, v16, v24) # INSTR
+#	m_bench_vx($1, T_A, vdivu)  # HANG
+#	m_bench_vx($1, T_A, vdiv)   # HANG
+#	m_bench_vx($1, T_A, vremu)	# HANG
+#	m_bench_vx($1, T_A, vrem)	# HANG
+#	m_bench_wxi($1, T_N, vnclipu)	# HANG
+#	m_bench_wxi($1, T_N, vnclip)	# HANG
+#	m_mask($1, bench_vfslide1downvf, T_F, m_nop, vfslide1down.vf, v8, v16, ft0)	# HANG
+#	m_bench_vf($1, T_F, vmfle)	# HANG
+#	m_bench_vf($1, T_F, vmfne)	# HANG
+#	m_bench_vf($1, T_F, vmfge)	# HANG
+#	m_mask($1, bench_vwredsumuvs, T_WR, m_nop, vwredsumu.vs, v8, v16, v24)  # INSTR
+#	m_mask($1, bench_vwredsumvs,  T_WR, m_nop, vwredsum.vs,  v8, v16, v24)	# INSTR
+#	m_mask($1, bench_vfwredosumvs, T_FWR, m_nop, vfwredosum.vs, v8, v16, v24)	# INSTR
+#	m_mask($1, bench_vfwredusumvs, T_FWR, m_nop, vfwredusum.vs, v8, v16, v24)	# INSTR
+#	m_mask($1, bench_vcpopm,   T_m1,  m_nop,  vcpop.m,   t0, v8)	# HANG
+#	m_mask($1, bench_vfirstm,  T_m1,  m_1bit, vfirst.m,  t0, v8)	# HANG
+#	m_mask($1, bench_vzextvf2, T_E2, m_1bit, vzext.vf2, v8, v16)	# INSTR
+#	m_mask($1, bench_vsextvf2, T_E2, m_1bit, vsext.vf2, v8, v16)	# INSTR
+#	m_mask($1, bench_vzextvf4, T_E4, m_1bit, vzext.vf4, v8, v16)	# INSTR
+#	m_mask($1, bench_vsextvf4, T_E4, m_1bit, vsext.vf4, v8, v16)	# INSTR
+#	m_mask($1, bench_vzextvf8, T_E8, m_1bit, vzext.vf8, v8, v16)	# HANG
+#	m_mask($1, bench_vsextvf8, T_E8, m_1bit, vsext.vf8, v8, v16)	# HANG
+#	m_mask($1, bench_vfrsqrt7v, T_F, m_nop, vfrsqrt7.v, v8, v16)	# HANG
+#	m_mask($1, bench_vmsbfm,   T_A, m_1bit, vmsbf.m,   v8, v16)		# HANG
+#	m_mask($1, bench_vmsofm,   T_A, m_1bit, vmsof.m,   v8, v16)		# HANG
+#	m_mask($1, bench_vmsifm,   T_A, m_1bit, vmsif.m,   v8, v16)		# HANG
+#	m_mask($1, bench_viotam,   T_A, m_nop,  viota.m,   v8, v16)		# HANG
+#	m_mask($1, bench_vidv,     T_A, m_nop,  vid.v,     v8)			# HANG
+#	m_$1(bench_vmvvv, T_A, m_nop, vmv.v.v, v8, v16)	# HANG?
+#	m_bench_vxi($1, T_A, vmseq) # HANG?
+#	m_mask($1, bench_vfslide1upvf,   T_F, m_nop, vfslide1up.vf,   v8, v16, ft0) # HANG?
+# 66 fails / 189 tests
+
 define(`m_bench_all',`
 	m_$1(bench_add, T_A, m_nop, add, t0, t1, t2)
 	m_$1(bench_mul, T_A, m_nop, mul, t0, t1, t2)
@@ -125,61 +196,14 @@ define(`m_bench_all',`
 	m_bench_vxi($1, T_A, vor)
 	m_bench_vxi($1, T_A, vxor)
 
-	m_mask($1, bench_vrgathervv,     T_A,  m_mod_v24_e8_vl,  vrgather.vv,     v8, v16, v24)
-	m_mask($1, bench_vrgathervx,     T_A,  m_mod_t0_vl,      vrgather.vx,     v8, v16, t0)
-	m_mask($1, bench_vrgathervi,     T_A,  m_nop,            vrgather.vi,     v8, v16, 3)
-	m_mask($1, bench_vslideupvx,     T_A,  m_mod_t0_vl,      vslideup.vx,     v8, v16, t0)
-	m_mask($1, bench_vslideupvi,     T_A,  m_nop,            vslideup.vi,     v8, v16, 3)
-	m_mask($1, bench_vrgatherei16vv, T_ei16, m_mod_v24_e16_vl, vrgatherei16.vv, v8, v16, v24)
-
-	m_mask($1, bench_vslidedownvx, T_A, m_mod_t0_vl,  vslidedown.vx, v8, v16, t0)
-	m_mask($1, bench_vslidedownvi, T_A, m_nop,        vslidedown.vi, v8, v16, 3)
-
-	m_mask($1, bench_vredsumvs,  T_A, m_nop, vredsum.vs,  v8, v16, v24)
-	m_mask($1, bench_vredandvs,  T_A, m_nop, vredand.vs,  v8, v16, v24)
-	m_mask($1, bench_vredorvs,   T_A, m_nop, vredor.vs,   v8, v16, v24)
-	m_mask($1, bench_vredxorvs,  T_A, m_nop, vredxor.vs,  v8, v16, v24)
-	m_mask($1, bench_vredminuvs, T_A, m_nop, vredminu.vs, v8, v16, v24)
-	m_mask($1, bench_vredminvs,  T_A, m_nop, vredmin.vs,  v8, v16, v24)
-	m_mask($1, bench_vredmaxuvs, T_A, m_nop, vredmaxu.vs, v8, v16, v24)
-	m_mask($1, bench_vredmaxvs,  T_A, m_nop, vredmax.vs,  v8, v16, v24)
-
 	m_bench_vx($1, T_A, vaaddu)
 	m_bench_vx($1, T_A, vaadd)
 	m_bench_vx($1, T_A, vasubu)
 	m_bench_vx($1, T_A, vasub)
 
-	m_mask($1, bench_vslide1upvx,   T_A, m_nop, vslide1up.vx,   v8, v16, t0)
-	m_mask($1, bench_vslide1downvx, T_A, m_nop, vslide1down.vx, v8, v16, t0)
-
-	m_bench_vxim($1, T_A, vadc)
-	m_bench_vxim($1, T_A, vmadc)
-	m_bench_vxm($1,  T_A, vsbc)
-	m_bench_vxm($1,  T_A, vmsbc)
-
 	m_bench_vxim($1, T_A, vmerge)
-	m_$1(bench_vmvvv, T_A, m_nop, vmv.v.v, v8, v16)
 	m_$1(bench_vmvvx, T_A, m_nop, vmv.v.x, v8, t0)
 	m_$1(bench_vmvvi, T_A, m_nop, vmv.v.i, v8, 13)
-	m_bench_vxi($1, T_A, vmseq)
-	m_bench_vxi($1, T_A, vmsne)
-	m_bench_vx($1,  T_A, vmsltu)
-	m_bench_vx($1,  T_A, vmslt)
-	m_bench_vxi($1, T_A, vmsleu)
-	m_bench_vxi($1, T_A, vmsle)
-	m_bench_xi($1,  T_A, vmsgtu)
-	m_bench_xi($1,  T_A, vmsgt)
-
-	m_$1(bench_vcompressvm, T_A, m_nop, vcompress.vm, v8, v16, v24)
-
-	m_$1(bench_vmandnmm, T_m1, m_nop, vmandn.mm, v8, v16, v24)
-	m_$1(bench_vmandmm,  T_m1, m_nop, vmand.mm,  v8, v16, v24)
-	m_$1(bench_vmormm,   T_m1, m_nop, vmor.mm,   v8, v16, v24)
-	m_$1(bench_vmxormm,  T_m1, m_nop, vmxor.mm,  v8, v16, v24)
-	m_$1(bench_vmornmm,  T_m1, m_nop, vmorn.mm,  v8, v16, v24)
-	m_$1(bench_vmnandmm, T_m1, m_nop, vmnand.mm, v8, v16, v24)
-	m_$1(bench_vmnormm,  T_m1, m_nop, vmnor.mm,  v8, v16, v24)
-	m_$1(bench_vmxnormm, T_m1, m_nop, vmxnor.mm, v8, v16, v24)
 
 	m_bench_vxi($1, T_A, vsaddu)
 	m_bench_vxi($1, T_A, vsadd)
@@ -195,10 +219,6 @@ define(`m_bench_all',`
 	m_bench_vxi($1, T_A, vsra)
 	m_bench_vxi($1, T_A, vssrl)
 
-	m_bench_vx($1, T_A, vdivu)
-	m_bench_vx($1, T_A, vdiv)
-	m_bench_vx($1, T_A, vremu)
-	m_bench_vx($1, T_A, vrem)
 	m_bench_vx($1, T_A, vmulhu)
 	m_bench_vx($1, T_A, vmul)
 	m_bench_vx($1, T_A, vmulhsu)
@@ -208,8 +228,6 @@ define(`m_bench_all',`
 
 	m_bench_wxi($1, T_N, vnsrl)
 	m_bench_wxi($1, T_N, vnsra)
-	m_bench_wxi($1, T_N, vnclipu)
-	m_bench_wxi($1, T_N, vnclip)
 	m_bench_xv($1,  T_N, vnmsub)
 	m_bench_xv($1,  T_N, vnmsac)
 
@@ -234,8 +252,6 @@ define(`m_bench_all',`
 	m_bench_vf($1, T_F, vfsgnj)
 	m_bench_vf($1, T_F, vfsgnjn)
 	m_bench_vf($1, T_F, vfsgnjx)
-	m_mask($1, bench_vfslide1upvf,   T_F, m_nop, vfslide1up.vf,   v8, v16, ft0)
-	m_mask($1, bench_vfslide1downvf, T_F, m_nop, vfslide1down.vf, v8, v16, ft0)
 
 	m_mask($1, bench_vfredusumvs, T_F, m_nop, vfredusum.vs, v8, v16, v24)
 	m_mask($1, bench_vfredosumvs, T_F, m_nop, vfredosum.vs, v8, v16, v24)
@@ -244,13 +260,6 @@ define(`m_bench_all',`
 
 	m_$1(bench_vfmergevfm, T_F, m_nop, vfmerge.vfm, v8,  v16, ft0, v0)
 	m_$1(bench_vfmvvf,     T_F, m_nop, vfmv.v.f,    v8,  ft0)
-
-	m_bench_vf($1, T_F, vmfeq)
-	m_bench_vf($1, T_F, vmfle)
-	m_bench_vf($1, T_F, vmflt)
-	m_bench_vf($1, T_F, vmfne)
-	m_bench_vf($1, T_F, vmfgt)
-	m_bench_vf($1, T_F, vmfge)
 
 	m_bench_vf($1, T_F, vfdiv)
 	m_mask($1, bench_vfrdivvf, T_F, m_nop, vfrdiv.vf, v8, v16, ft0)
@@ -266,9 +275,6 @@ define(`m_bench_all',`
 	m_bench_fv($1, T_FN, vfnmsub)
 	m_bench_fv($1, T_FN, vfnmadd)
 
-	m_mask($1, bench_vwredsumuvs, T_WR, m_nop, vwredsumu.vs, v8, v16, v24)
-	m_mask($1, bench_vwredsumvs,  T_WR, m_nop, vwredsum.vs,  v8, v16, v24)
-
 	m_bench_vf($1, T_FW, vfwadd)
 	m_bench_vf($1, T_FW, vfwsub)
 	m_bench_wf($1, T_FW, vfwadd)
@@ -279,23 +285,8 @@ define(`m_bench_all',`
 	m_bench_fv($1, T_FW, vfwmsac)
 	m_bench_fv($1, T_FW, vfwnmsac)
 
-	m_mask($1, bench_vfwredosumvs, T_FWR, m_nop, vfwredosum.vs, v8, v16, v24)
-	m_mask($1, bench_vfwredusumvs, T_FWR, m_nop, vfwredusum.vs, v8, v16, v24)
-
 	m_$1(bench_vmvsx, T_A, m_nop, vmv.s.x, v8, t0)
 	m_$1(bench_vmvxs, T_A, m_nop, vmv.x.s, t0, v8)
-
-	m_mask($1, bench_vcpopm,   T_m1,  m_nop,  vcpop.m,   t0, v8)
-	m_mask($1, bench_vfirstm,  T_m1,  m_1bit, vfirst.m,  t0, v8)
-	m_mask($1, bench_vzextvf2, T_E2, m_1bit, vzext.vf2, v8, v16)
-	m_mask($1, bench_vsextvf2, T_E2, m_1bit, vsext.vf2, v8, v16)
-	m_mask($1, bench_vzextvf4, T_E4, m_1bit, vzext.vf4, v8, v16)
-	m_mask($1, bench_vsextvf4, T_E4, m_1bit, vsext.vf4, v8, v16)
-	m_mask($1, bench_vzextvf8, T_E8, m_1bit, vzext.vf8, v8, v16)
-	m_mask($1, bench_vsextvf8, T_E8, m_1bit, vsext.vf8, v8, v16)
-
-	m_$1(bench_vfmvfs, T_F, m_nop, vfmv.f.s, ft0, v8)
-	m_$1(bench_vfmvsf, T_F, m_nop, vfmv.s.f, v8,  ft0)
 
 	m_mask($1, bench_vfcvtxufv,    T_F, m_nop, vfcvt.xu.f.v,     v8, v16)
 	m_mask($1, bench_vfcvtxfv,     T_F, m_nop, vfcvt.x.f.v,      v8, v16)
@@ -322,20 +313,14 @@ define(`m_bench_all',`
 	m_mask($1, bench_vfncvt.rod.f.f.w, T_FN, m_nop, vfncvt.rod.f.f.w,  v8, v16)
 
 	m_mask($1, bench_vfsqrtv,   T_F, m_nop, vfsqrt.v,   v8, v16)
-	m_mask($1, bench_vfrsqrt7v, T_F, m_nop, vfrsqrt7.v, v8, v16)
 	m_mask($1, bench_vfrec7v,   T_F, m_nop, vfrec7.v,   v8, v16)
 	m_mask($1, bench_vfclassv,  T_F, m_nop, vfclass.v,  v8, v16)
-
-	m_mask($1, bench_vmsbfm,   T_A, m_1bit, vmsbf.m,   v8, v16)
-	m_mask($1, bench_vmsofm,   T_A, m_1bit, vmsof.m,   v8, v16)
-	m_mask($1, bench_vmsifm,   T_A, m_1bit, vmsif.m,   v8, v16)
-	m_mask($1, bench_viotam,   T_A, m_nop,  viota.m,   v8, v16)
-	m_mask($1, bench_vidv,     T_A, m_nop,  vid.v,     v8)
 
 ')
 
 
 .data
+# mount /dev/iceblk2 /mnt/ && /mnt/rvv/rvv/rvv; umount /mnt/
 
 
 #if __riscv_xlen == 32
@@ -461,7 +446,7 @@ ifelse(m_LMUL,8,`m_gen_code_m8(m_code)')
 #ifdef READ_MCYCLE
 	csrr a1, mcycle
 #else
-	csrr a1, cycle
+	rdcycle a1
 #endif
 1:
 .rept UNROLL
@@ -476,7 +461,7 @@ ifelse(m_LMUL,8,`m_gen_code_m8(m_code)')
 #ifdef READ_MCYCLE
 	csrr a0, mcycle
 #else
-	csrr a0, cycle
+	rdcycle a0
 #endif
 	sub a0, a0, a1
 ret	popdef(`m_code')
@@ -504,10 +489,10 @@ randomize:
 #endif
 
 	vsetvli a4, x0, e8, m8, ta, ma
-	vid.v v0
+#	vid.v v0
 	vsetvli a4, x0, e16, m8, ta, ma
 	vmul.vx v0, v0, a3
-	vid.v v8
+#	vid.v v8
 	vadd.vv v0, v0, v8
 	vxor.vx v0, v0, a0
 
